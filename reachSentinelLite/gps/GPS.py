@@ -3,6 +3,7 @@ import time
 import math
 from .velocityFromGps import calcVelGPS
 
+
 def GPSInit():
   reset = input('Would you like to reset the coordinates? Y/N: ')
   if(str(reset).upper() == 'Y'):
@@ -12,18 +13,19 @@ def GPSInit():
     coor.write("")
   print('GPS initiated')
 
-def saveCoor(lon, lat, alt):
-  newCoor = ( 
-            '%s,%s,%s'
-        ) %(lon, lat, alt)
 
-  with open('coordinates.txt', 'a+') as coor: 
+def saveCoor(lon, lat, alt):
+  newCoor = (
+      '%s,%s,%s'
+  ) % (lon, lat, alt)
+
+  with open('coordinates.txt', 'a+') as coor:
         print("lon, lat, alt: " + newCoor)
         coor.write(newCoor + '\n')
 
   with open("position.kml", "w") as pos:
       kmlHead = (
-            """<?xml version="1.0" encoding="UTF-8"?>
+          """<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Paths</name>
@@ -47,20 +49,22 @@ def saveCoor(lon, lat, alt):
         <extrude>1</extrude>
         <tessellate>1</tessellate>
         <altitudeMode>absolute</altitudeMode>
-        <coordinates>\n""" 
-            )
+        <coordinates>\n"""
+      )
       kmlFoot = (
-            """</coordinates>
+          """</coordinates>
       </LineString>
     </Placemark>
   </Document>
 </kml>\n"""
-            )
+      )
       coor = open('coordinates.txt', 'r')
 
       pos.write(kmlHead + coor.read() + kmlFoot)
 
 #def processCoordinates(timestamp, longitude, latitude, altitude):
+
+
 def processCoordinates(longitude, latitude, altitude):
 
     latDeg = math.floor(latitude)
@@ -68,10 +72,10 @@ def processCoordinates(longitude, latitude, altitude):
 
     latMin = latitude - latDeg
     lonMin = longitude - lonDeg
-    
+
     lat = latDeg + latMin/60.0
     lon = lonDeg - lonMin/60.0
-    
+
     saveCoor(lon, lat, altitude)
     '''
     #push the last new value to the old and then set the new value 
@@ -87,28 +91,26 @@ def processCoordinates(longitude, latitude, altitude):
     print("time elapsed: " + str(dt)) 
     calcVelGPS(lat1, lon1, lat2, lon2, dt)
     '''
-import random
-import time
-import math
-from .velocityFromGps import calcVelGPS
+
 
 def GPSInit():
   #reset coordinates path
   coor = open('coordinates.txt', 'w+')
   coor.write("")
 
-def saveCoor(lon, lat, alt):
-  newCoor = ( 
-            '%s,%s,%s'
-        ) %(lon, lat, alt)
 
-  with open('coordinates.txt', 'a+') as coor: 
+def saveCoor(lon, lat, alt):
+  newCoor = (
+      '%s,%s,%s'
+  ) % (lon, lat, alt)
+
+  with open('coordinates.txt', 'a+') as coor:
         print("lon, lat, alt: " + newCoor)
         coor.write(newCoor + '\n')
 
   with open("position.kml", "w") as pos:
       kmlHead = (
-            """<?xml version="1.0" encoding="UTF-8"?>
+          """<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2">
   <Document>
     <name>Paths</name>
@@ -132,15 +134,15 @@ def saveCoor(lon, lat, alt):
         <extrude>1</extrude>
         <tessellate>1</tessellate>
         <altitudeMode>absolute</altitudeMode>
-        <coordinates>\n""" 
-            )
+        <coordinates>\n"""
+      )
       kmlFoot = (
-            """</coordinates>
+          """</coordinates>
       </LineString>
     </Placemark>
   </Document>
 </kml>\n"""
-            )
+      )
       coor = open('coordinates.txt', 'r')
 
       pos.write(kmlHead + coor.read() + kmlFoot)
@@ -153,22 +155,22 @@ def processCoordinates(timestamp, longitude, latitude, altitude):
 
     latMin = float(latitude) - latDeg
     lonMin = float(longitude) - lonDeg
-    
+
     lat = float(latDeg)+float(latMin)/60
     lon = float(lonDeg)-float(lonMin)/60
-    
+
     saveCoor(lon, lat, altitude)
-    
-    #push the last new value to the old and then set the new value 
-    lat1 = lat2
+
+    #push the last new value to the old and then set the new value
+    lat1 = 0
     lat2 = lat
-    lon1 = lon2
+    lon1 = 0
     lon2 = lon
 
     #creation of variables for speed calc
-    oldTime = newTime
+    oldTime = 0
     #update time with timestamp
     newTime = timestamp
     dt = newTime - oldTime
-    print("time elapsed: " + str(dt)) 
+    print("time elapsed: " + str(dt))
     calcVelGPS(lat1, lon1, lat2, lon2, dt)

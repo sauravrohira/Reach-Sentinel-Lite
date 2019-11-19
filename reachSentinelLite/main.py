@@ -11,16 +11,17 @@ import math
 import numpy as np
 import os
 import django
+import sys
 
 from gps.GPS import GPSInit, saveCoor, processCoordinates, calcVelGPS
 from communication.sendUDP import initSocket, sendPacket, killSocket
 from altimeter.altitudeCalculation import altitudeCalc
 import acceleration
-#from accel import findInertialFrameAccel
 from serialStuff import openSerialPort, readFromSerial
 from DataObject import DataObject
 
-from graphs.models import Telemetry, IsLive, TimeInit  # exec(open("main.py").read())
+# exec(open("main.py").read())
+from graphs.models import Telemetry, IsLive, TimeInit
 ##Initiate variables
 DEBUG = True
 FIRST = True
@@ -32,8 +33,8 @@ dropped = 0
 lat2 = 0
 lon2 = 0
 GPSInit()
-velocity = np.matrix([0,0,0]).T
-position = np.matrix([0,0,0]).T
+velocity = np.matrix([0, 0, 0]).T
+position = np.matrix([0, 0, 0]).T
 
 #TODO function for dynamicaly assessing calibration constants
 ACCX_CALIB = 0
@@ -59,17 +60,6 @@ PRESSURE = 14
 ALTITUDE = 15
 BAROTEMP = 16
 
-'''
-MAGX = 7
-MAGY = 8
-MAGZ = 9
-MAGHEAD = 10
-TEMP = 11
-PRESSURE = 13
-ALTITUDE = 12
-BAROTEMP = 14
-'''
-
 tots_not_launch = 1
 count = 0
 
@@ -80,15 +70,15 @@ django.setup()
 
 print("\n\n\n")
 print(
-	'             ||---------------------------- * * * -------------------------\\\\\n'\
-	'             ||   ______                    _____                           \\\\\n'\
-	'       ######||   | ___ \           ()     /  ___|                           \\\\\n'\
-	'  ###########||   | |_/ /_ __ _   _ _ _ __ \ `--. _ __   __  _  ___ ___       \\\\\n'\
-	"#############||   | ___ \ '__| | | | | '_ \ `--. \ '_ \ / _\| |/ __/ _ \       \\\\\n"\
-	'   ##########||   | |_/ / |  | |_| | | | | /\__/ / |_) | (_ | | (__| __/       //\n'\
-	'        #####||   \____/|_|   \__,_|_|_| |_\____/| .__/ \__/|_|\___\___|      //\n'\
-	'      #######||                                  | |                         //\n'\
-	'             ||                                  |_|                        //\n'\
+	'             ||---------------------------- * * * -------------------------\\\\\n'
+	'             ||   ______                    _____                           \\\\\n'
+	'       ######||   | ___ \           ()     /  ___|                           \\\\\n'
+	'  ###########||   | |_/ /_ __ _   _ _ _ __ \ `--. _ __   __  _  ___ ___       \\\\\n'
+	"#############||   | ___ \ '__| | | | | '_ \ `--. \ '_ \ / _\| |/ __/ _ \       \\\\\n"
+	'   ##########||   | |_/ / |  | |_| | | | | /\__/ / |_) | (_ | | (__| __/       //\n'
+	'        #####||   \____/|_|   \__,_|_|_| |_\____/| .__/ \__/|_|\___\___|      //\n'
+	'      #######||                                  | |                         //\n'
+	'             ||                                  |_|                        //\n'
 	'             ||---------------------------- * * * -------------------------//\n')
 
 print("\n\n\n")
@@ -105,7 +95,7 @@ if Telemetry.objects.count() != 0:
 		elem.delete()
 
 if Telemetry.objects.count() == 0:
-	Telemetry.objects.create() # zero data-point
+	Telemetry.objects.create()  # zero data-point
 	if (DEBUG):
 		exec(open("dummyTelem.py").read())
 		print("READ dummyTelem.py")
@@ -114,12 +104,13 @@ if IsLive.objects.count() != 0:  # ------------------ * * * ------------------ R
 	for elem in IsLive.objects.all():
 		elem.delete()
 
-downlink = IsLive.objects.create() # ----------------- * * * ----------------- INITIALLY FALSE, ON BUTTON-CLICK IN DASH, TRUE
+# ----------------- * * * ----------------- INITIALLY FALSE, ON BUTTON-CLICK IN DASH, TRUE
+downlink = IsLive.objects.create()
 
 try:
 	print("Opening Serial Port...")
 	#initiate serial port to read data from
-	SERIAL_PORT = '/dev/cu.usbmodem14311'  # '/dev/cu.usbmodem14321'
+	SERIAL_PORT = '/dev/cu.usbmodem14101'  # '/dev/cu.usbmodem14321'
 	ser = serial.Serial(
 	    port=SERIAL_PORT,
 	    baudrate=9600,
@@ -129,82 +120,31 @@ try:
 	    bytesize=serial.SEVENBITS
 	)
 	print("connected to port " + SERIAL_PORT)
-except:
+except Exception as ex:
 	print("<== Error connecting to " + SERIAL_PORT + " ==>")
-	exit()
+	print(ex)
+	sys.exit(1)
 
 ##create plain text file to save raw data as backup for database
 date = str(datetime.datetime.now())
 FILENAME = 'Raw_Data/' + date
 FILENAME = FILENAME.replace(':', '_')
+FILENAME += '.csv'
 txtfile = open(FILENAME, "w")
-txtfile.write('Project Reach Raw Data starting at ' + date)
+txtfile.write('Project Reach Raw Data starting at ' + date + '\n')
 
 print('Telemetry initiated')
 
 isFirst = True
-dataString = '' # --------------------- * * * ----------------------------------- EDIT!!!
-myData.calibrate(ser, txtfile, [ACCELX, ACCELY, ACCELZ])
-
-'''
-while True:
-	data = readFromSerial(ser, txtfile)
-	if data == -1: continue
-	print('step 1')
-	print('step 2')
-	print('step 3')
-	print('populated')
-
-	new_data = Telemetry.objects.create(  # -------------- * * * -------------- SAVE TO DATABASE
-		timestamp = data[TIMESTAMP], 
-		accel_x   = data[ACCELX], 
-		accel_y   = data[ACCELY], 
-		accel_z   = data[ACCELZ], 
-		gyro_x    = data[GYROX], 
-		gyro_y    = data[GYROY], 
-		gyro_z    = data[GYROZ],
-		barometer = data[ALTITUDE],
-		#temp = data[TEMP]
-		)
-	new_data.save()
-
- 	
-	###PROCESS
-	#establish time elapsed
-	dt = (myData.timestamp - oldtime)/1000.0 #convert ms to s
-	print(myData.timestamp)
-	print(oldtime)
-	oldtime = myData.timestamp
-	print(str(dt))
-	
-	# append altitude calculated from pressure
-	# data.append(altitudeCalc(data[1]))
-	
-	#process acceleration
-	acceleration.findInertialFrameAccel(myData, dt)
-	print('found acceleration')
-	#integrate to find velocity and positino
-	acceleration.calculateVelocityAndPosition(myData, dt)
-	print('found vel and pos')
-	#Process GPS coordinates
-	if myData.gps_sec != oldGPSTime:
-		oldGPSTime = myData.gps_sec
-		processCoordinates(myData.gps_lon, myData.gps_lat, myData.gps_alt)
-		print('processed coordinates')
-	
-	#append absolute time
-	# data.append(time.time())
-	
-	myData.printData()
-	#print(dropped)
-'''
+dataString = ''  # --------------------- * * * ----------------------------------- EDIT!!!
+# myData.calibrate(ser, txtfile, [ACCELX, ACCELY, ACCELZ])
 
 ##Main Processing Loop
 while ser.isOpen():
 	try:
 		#get data
 		print('reading...')
-		dataString = str(ser.readline())
+		dataString = ser.readline().decode()
 		print(dataString)
 		'''
 		if(dataString == "b''"):
@@ -225,7 +165,7 @@ while ser.isOpen():
 		dataString = dataString[2:len(dataString)-5]
 		print('Received: ' + dataString)
 		data = dataString.split(",")
-		#had problems with only reading in a few data 
+		#had problems with only reading in a few data
 		if (len(data) < 6):
 			print("not enough data")
 			continue
@@ -250,69 +190,69 @@ while ser.isOpen():
 		myData.gyro_x = data[GYROX]
 		myData.gyro_y = data[GYROY]
 		myData.gyro_z = data[GYROZ]
-		myData.gps_lat = data[GPSLON]
+		myData.gps_lat = data[GPSLONG]
 		myData.gps_lon = data[GPSLAT]
 		myData.gps_alt = data[GPSALT]
-		myData.gps_hour = data[GPSHOUR]
+		myData.gps_hour = data[GPSHR]
 		myData.gps_min = data[GPSMIN]
 		myData.gps_sec = data[GPSSEC]
+		myData.temp = data[TEMP]
+		myData.press = data[PRESSURE]
+		myData.altitude = data[ALTITUDE]
+		myData.baro_temp = data[BAROTEMP]
 		#myData.mag_x = data[MAGX]
 		#myData.mag_y = data[MAGY]
 		#myData.mag_z = data[MAGZ]
 		#myData.mag_head = data[MAGHEAD]
-		myData.temp = data[TEMP]
-		myData.press = data[PRESS]
-		myData.altitude = data[ALTITUDE]
-		myData.baro_temp = data[BAROTEMP]
-			
+
 		print(data)
 
-		if (isFirst):
-			TimeInit.objects.get().timeInit = datetime.datetime.now() - data[TIMESTAMP]
-			isFirst = False
+		# if (isFirst):
+		# 	TimeInit.objects.get().timeInit = datetime.datetime.now() - data[TIMESTAMP]
+		# 	isFirst = False
 
-		print("Timestamp", data[TIMESTAMP])
+		print("Timestamp:", data[TIMESTAMP])
 
 		print('--------')
 
 		new_data = Telemetry.objects.create(  # -------------- * * * -------------- SAVE TO DATABASE
-		timestamp = data[TIMESTAMP], 
-		accel_x   = data[ACCELX], 
-		accel_y   = data[ACCELY], 
-		accel_z   = data[ACCELZ], 
-		gyro_x    = data[GYROX], 
-		gyro_y    = data[GYROY], 
-		gyro_z    = data[GYROZ],
-		barometer = data[ALTITUDE],
-		#temp = data[TEMP]
+                    timestamp=data[TIMESTAMP],
+                    accel_x=data[ACCELX],
+                    accel_y=data[ACCELY],
+                    accel_z=data[ACCELZ],
+                    gyro_x=data[GYROX],
+                    gyro_y=data[GYROY],
+                    gyro_z=data[GYROZ],
+                    barometer=data[ALTITUDE],
+                    temp=data[TEMP]
 		)
 		new_data.save()
 
-		#for the first few iterations, just take the 
+		#for the first few iterations, just take the
 		#accelerometer data to calibrate the offsets
 
-		if(count<6):
+		if(count < 6):
 			print('Calibrating...')
 			myData.accx_calib += myData.accel_x
 			myData.accy_calib += myData.accel_y
 			myData.accz_calib += myData.accel_z
-			count+=1
+			count += 1
 			#establish spacecraft time
 			oldtime = myData.timestamp
-		
+
 		else:
 			print('processing...')
-			if(count==6):
+			if(count == 6):
 				myData.accx_calib = myData.accx_calib/6
 				myData.accy_calib = myData.accy_calib/6
 				myData.accz_calib = myData.accz_calib/6
-				count+=1
+				count += 1
 				myData.printCalibration()
 				#print('Calibration: ' + str(ACCX_CALIB) + ', ' + str(ACCY_CALIB) + ', ' + str(ACCZ_CALIB))
-		
+
 			##DO STUFF WITH DATA
 			#establish time elapsed
-			dt = (myData.timestamp - oldtime)/1000.0 #convert ms to s
+			dt = (myData.timestamp - oldtime)/1000.0  # convert ms to s
 			oldtime = myData.timestamp
 			print(str(dt))
 			'''
@@ -328,7 +268,8 @@ while ser.isOpen():
 			print('found vel and pos')
 			#Process GPS coordinates
 			if myData.gps_sec != oldGPSTime:
-				processCoordinates(myData.gps_lon, myData.gps_lat, myData.gps_alt)
+				processCoordinates(myData.timestamp, myData.gps_lon,
+				                   myData.gps_lat, myData.gps_alt)
 				print('processed coordinates')
 			'''
 			#append absolute time
@@ -368,13 +309,13 @@ while ser.isOpen():
 			print(finalData)
 			myData.printData()
 			print(dropped)
-	except:
-		print('failed\n')
+	except Exception as e:
+		print('failed\n', e)
 		print(dropped)
-		continue #maybe this should be a continue?
+		continue  # maybe this should be a continue?
 		######SAVE TO DATABASE
 
-	#TODO -- might actually want to implement the data object. 
+	#TODO -- might actually want to implement the data object.
 	#At this point it's confusing where the processed data ends up
 	'''
 	try:
